@@ -1,0 +1,9 @@
+---
+# handlers file for tamay.netbox
+
+- name: "Restart supervisor"
+  service:
+    state: restarted
+    name: supervisord
+    enabled: yes
+  listen: restart_supervisor

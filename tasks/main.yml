@@ -1,0 +1,93 @@
+---
+# tasks file for tamay.netbox
+
+- name: "Install epel repository"
+  package:
+    state: present
+    name: epel-release
+
+- name: "Install packages required by NetBox and its dependencies"
+  package:
+    state: present
+    name:
+      - gcc
+      - python36
+      - python36-devel
+      - python-setuptools
+      - python36-setuptools
+      - python36-pip
+      - libxml2-devel
+      - libxslt-devel
+      - libffi-devel
+      - graphviz
+      - openssl-devel
+      - redhat-rpm-config
+      - redis
+      - supervisor
+
+- name: "Start and enable redis"
+  service:
+    state: started
+    name: redis
+    enabled: yes
+
+- name: "Download netbox v{{ netbox_version }}"
+  unarchive:
+    src: "https://github.com/netbox-community/netbox/archive/v{{ netbox_version }}.tar.gz"
+    remote_src: yes
+    dest: /opt
+    owner: root
+    group: root
+    creates: /opt/netbox-{{ netbox_version }}/README.md
+
+- name: "Create symbolic link to /opt/netbox"
+  file:
+    state: link
+    src: /opt/netbox-{{ netbox_version }}
+    dest: /opt/netbox
+    force: yes
+
+- name: "Install python3 packages"
+  pip:
+    requirements: /opt/netbox/requirements.txt
+    executable: pip3
+
+- name: "Install napalm"
+  pip:
+    name: napalm
+    executable: pip3
+
+- name: "Copy configuration.py"
+  template:
+    src: configuration.py.j2
+    dest: /opt/netbox/netbox/netbox/configuration.py
+
+- name: "Run database migrations"
+  command: python3 /opt/netbox/netbox/manage.py migrate
+  register: _migration
+  changed_when: "'No migrations to apply' not in _migration.stdout"
+
+- name: "Collect static files"
+  command: python3 /opt/netbox/netbox/manage.py collectstatic --noinput
+  register: _static
+  changed_when: "'0 static files copied to' not in _static.stdout"
+
+- name: "Load initial data"
+  command: python3 /opt/netbox/netbox/manage.py loaddata initial_data
+  changed_when: no
+
+- name: "Install gunicorn"
+  pip:
+    name: gunicorn
+    executable: pip3
+
+- name: "Copy gunicorn_config.py"
+  template:
+    src: gunicorn_config.py.j2
+    dest: /opt/netbox/gunicorn_config.py
+
+- name: "Copy netbox.ini to /etc/supervisor/conf.d/"
+  template:
+    src: netbox.ini.j2
+    dest: /etc/supervisord.d/netbox.ini
+  notify: restart_supervisor

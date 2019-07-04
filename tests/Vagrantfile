@@ -1,0 +1,28 @@
+Vagrant.configure(2) do |config|
+
+  if Vagrant.has_plugin?("vagrant-hostmanager")
+    config.hostmanager.enabled = true
+    config.hostmanager.manage_host = true
+    config.hostmanager.manage_guest = false
+  end
+
+  # General Libvirt Connection
+  config.vm.provider :libvirt do |libvirt|
+    libvirt.host = "localhost"
+    libvirt.uri = 'qemu+unix:///system'
+    libvirt.driver = 'kvm'
+    libvirt.memory = '2048'
+    libvirt.cpus = '1'
+  end
+
+  config.vm.define "netbox" do |netbox|
+    netbox.vm.box = "centos/7"
+    netbox.vm.network "private_network", type: "dhcp"
+    netbox.vm.hostname = "netbox.example.com"
+  end
+
+  config.vm.provision "ansible" do |ansible|
+    ansible.playbook = "test.yml"
+  end
+
+end

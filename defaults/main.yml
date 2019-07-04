@@ -1,0 +1,18 @@
+---
+# defaults file for tamay.netbox
+
+# Version of Netbox to install
+# See https://github.com/netbox-community/netbox/releases
+netbox_version: '2.6.1'
+
+# Configuration for netbox/netbox/configuration.py
+netbox_config:
+  allowed_hosts:
+    - "{{ ansible_fqdn }}"
+    - "{{ ansible_default_ipv4.address }}"
+  # Database connection
+  database_name: netbox
+  database_user: netbox
+  database_password: netbox
+  database_host: localhost
+  database_port: 5432
